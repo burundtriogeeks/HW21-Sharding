@@ -1,0 +1,64 @@
+version: "3.5"
+
+services:
+  pg-m:
+    image: postgres:15.2
+    restart: always
+    environment:
+      POSTGRES_PASSWORD: postgres
+      POSTGRES_USER: postgres
+    volumes:
+      - "./sql/master.sql:/docker-entrypoint-initdb.d/master.sql"
+    links:
+      - pg-s1
+      - pg-s2
+    depends_on:
+      - pg-s1
+      - pg-s2
+    ports:
+      - "127.0.0.1:5432:5432"
+
+  pg-s1:
+    image: postgres:15.2
+    restart: always
+    environment:
+      POSTGRES_PASSWORD: postgres
+      POSTGRES_USER: postgres
+    volumes:
+      - "./sql/shard1.sql:/docker-entrypoint-initdb.d/shard1.sql"
+    ports:
+      - "127.0.0.1:5433:5432"
+
+  pg-s2:
+    image: postgres:15.2
+    restart: always
+    environment:
+      POSTGRES_PASSWORD: postgres
+      POSTGRES_USER: postgres
+    volumes:
+      - "./sql/shard2.sql:/docker-entrypoint-initdb.d/shard2.sql"
+    ports:
+      - "127.0.0.1:5434:5432"
+
+  adminer:
+    image: adminer
+    restart: always
+    links:
+      - pg-s2
+      - pg-s1
+      - pg-m
+    ports:
+      - "127.0.0.1:8080:8080"
+
+  php:
+    image: hw21-php
+    build:
+      context: .
+      dockerfile: phpDockerFile
+    restart: always
+    depends_on:
+      - pg-m
+    links:
+      - pg-m
+    volumes:
+      - "./app:/var/www/html/public"
